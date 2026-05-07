@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.css": "/vkr-new/static/css/main.8f71a624.css",
+    "main.css": "/vkr-new/static/css/main.943ce4ab.css",
     "main.js": "/vkr-new/static/js/main.60350b71.js",
     "static/media/ифт1.png": "/vkr-new/static/media/ифт1.9785fd5dadfcef32a7c8.png",
     "static/media/zavod.png": "/vkr-new/static/media/zavod.67b0b3e4ac15f558d4e9.png",
@@ -8,11 +8,11 @@
     "static/media/equipment-icon.svg": "/vkr-new/static/media/equipment-icon.2f27f4cc8fcdfc83ec857c225581a035.svg",
     "static/media/quality-icon.svg": "/vkr-new/static/media/quality-icon.95aee9646d3cd75e326fdd16bf9ad035.svg",
     "index.html": "/vkr-new/index.html",
-    "main.8f71a624.css.map": "/vkr-new/static/css/main.8f71a624.css.map",
+    "main.943ce4ab.css.map": "/vkr-new/static/css/main.943ce4ab.css.map",
     "main.60350b71.js.map": "/vkr-new/static/js/main.60350b71.js.map"
   },
   "entrypoints": [
-    "static/css/main.8f71a624.css",
+    "static/css/main.943ce4ab.css",
     "static/js/main.60350b71.js"
   ]
 }
