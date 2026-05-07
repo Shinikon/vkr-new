@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/vkr-new/static/css/main.8f71a624.css",
-    "main.js": "/vkr-new/static/js/main.c479dc45.js",
+    "main.js": "/vkr-new/static/js/main.1642e0da.js",
     "static/media/ифт1.png": "/vkr-new/static/media/ифт1.9785fd5dadfcef32a7c8.png",
     "static/media/zavod.png": "/vkr-new/static/media/zavod.67b0b3e4ac15f558d4e9.png",
     "static/media/team-icon.svg": "/vkr-new/static/media/team-icon.09f06ce4ee545253f5cb4ace63198b78.svg",
@@ -9,10 +9,10 @@
     "static/media/quality-icon.svg": "/vkr-new/static/media/quality-icon.95aee9646d3cd75e326fdd16bf9ad035.svg",
     "index.html": "/vkr-new/index.html",
     "main.8f71a624.css.map": "/vkr-new/static/css/main.8f71a624.css.map",
-    "main.c479dc45.js.map": "/vkr-new/static/js/main.c479dc45.js.map"
+    "main.1642e0da.js.map": "/vkr-new/static/js/main.1642e0da.js.map"
   },
   "entrypoints": [
     "static/css/main.8f71a624.css",
-    "static/js/main.c479dc45.js"
+    "static/js/main.1642e0da.js"
   ]
 }
