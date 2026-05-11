@@ -51,7 +51,7 @@ const ContactPage = () => {
               <div className="contact-left__info">
                 <div className="contact-left__row">
                   <div className="contact-left__item">
-                    <h3 className="contact-left__item-title">Приёмная</h3>
+                    <h3 className="contact-left__item-title">ПРИЁМНАЯ</h3>
                     <p className="contact-left__item-phone">
                       +7 (3473) 25-18-93
                     </p>

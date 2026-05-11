@@ -88,7 +88,6 @@ const Footer = ({ variant = "main" }) => {
         </ul>
       </div>
 
-
       <div>
         <p className={styles.footerColTitle}>О предприятии</p>
         <ul className={styles.footerNav}>
@@ -111,7 +110,7 @@ const Footer = ({ variant = "main" }) => {
         <p className={styles.footerColTitle}>Как добраться</p>
         <div className={styles.footerMap}>
           <iframe
-            src="https://yandex.ru/map-widget/v1/?ll=55.926%2C56.333&z=12&pt=55.926,56.333"
+            src="https://yandex.ru/map-widget/v1/?ll=55.944721%2C53.688796&z=18.4&pt=55.944721%2C53.688796"
             title="Карта проезда"
             allowFullScreen
           />
@@ -127,7 +126,6 @@ const Footer = ({ variant = "main" }) => {
 
   const renderContactsVariant = () => (
     <div className={`${styles.footerGrid} ${styles.footerGridContacts}`}>
-
       <div>
         <p className={styles.footerLogo}>ФКП Авангард</p>
         <p className={styles.footerDesc}>
@@ -158,7 +156,6 @@ const Footer = ({ variant = "main" }) => {
         </p>
       </div>
 
-
       <div>
         <p className={styles.footerColTitle}>Навигация</p>
         <ul className={styles.footerNav}>
@@ -179,12 +176,11 @@ const Footer = ({ variant = "main" }) => {
         </ul>
       </div>
 
-
       <div>
         <p className={styles.footerColTitle}>Как добраться</p>
         <div className={styles.footerMap}>
           <iframe
-            src="https://yandex.ru/map-widget/v1/?ll=55.926%2C56.333&z=12&pt=55.926,56.333"
+            src="https://yandex.ru/map-widget/v1/?ll=55.944721%2C53.688796&z=18.4&pt=55.944721%2C53.688796"
             title="Карта проезда"
             allowFullScreen
           />
@@ -198,7 +194,6 @@ const Footer = ({ variant = "main" }) => {
 
   const renderOtherVariant = () => (
     <div className={`${styles.footerGrid} ${styles.footerGridOther}`}>
-
       <div>
         <p className={styles.footerLogo}>ФКП Авангард</p>
         <p className={styles.footerDesc}>
@@ -206,7 +201,6 @@ const Footer = ({ variant = "main" }) => {
           производством
         </p>
       </div>
-
 
       <div>
         <p className={styles.footerColTitle}>Навигация</p>
@@ -233,7 +227,6 @@ const Footer = ({ variant = "main" }) => {
           </li>
         </ul>
       </div>
-
 
       <div>
         <p className={styles.footerColTitle}>Контакты</p>
