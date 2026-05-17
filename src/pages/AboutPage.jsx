@@ -1,15 +1,12 @@
 import React from "react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import ScrollAnimation from "../components/ScrollAnimation";
+import CarouselSlider from "../components/CarouselSlider";
 import ban2 from "../assets/img/zavod.png";
 
 const AboutPage = () => {
   return (
     <div className="page about-page">
       <ScrollAnimation />
-
-
 
       <section
         className="about-header"
@@ -24,6 +21,8 @@ const AboutPage = () => {
           </div>
         </div>
       </section>
+
+      <CarouselSlider />
 
       <section className="about-description animate-on-scroll">
         <div className="container">
@@ -52,41 +51,6 @@ const AboutPage = () => {
               специалистов, включая инженеров-конструкторов, технологов и
               квалифицированных рабочих.
             </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="values animate-on-scroll">
-        <div className="container">
-          <h2 className="section-title">Наши ценности</h2>
-          <div className="values-grid">
-            <div className="value-card">
-              <div className="value-card__icon">
-                <div className="icon-placeholder"></div>
-              </div>
-              <h3 className="value-title">Качество</h3>
-              <p className="value-text">
-                Строгий контроль на каждом этапе производства
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-card__icon">
-                <div className="icon-placeholder"></div>
-              </div>
-              <h3 className="value-title">Инновации</h3>
-              <p className="value-text">
-                Постоянное совершенствование технологий и процессов
-              </p>
-            </div>
-            <div className="value-card">
-              <div className="value-card__icon">
-                <div className="icon-placeholder"></div>
-              </div>
-              <h3 className="value-title">Надёжность</h3>
-              <p className="value-text">
-                Гарантия качества и своевременная поставка
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -145,12 +109,28 @@ const AboutPage = () => {
           <div className="production-wrapper">
             <div className="production-image-placeholder">
               <div className="placeholder-content">
+                <img
+                  src="/images/plant-placeholder.jpg"
+                  alt="Изображение завода"
+                  loading="lazy"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "12px",
+                  }}
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
                 <svg
                   width="64"
                   height="64"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
+                  style={{ display: "none" }}
                 >
                   <path
                     d="M4 16L8.586 11.414C8.96106 11.0391 9.46967 10.8284 10 10.8284C10.5303 10.8284 11.0389 11.0391 11.414 11.414L16 16M14 14L15.586 12.414C15.9611 12.0391 16.4697 11.8284 17 11.8284C17.5303 11.8284 18.0389 12.0391 18.414 12.414L20 14M14 8H14.01M6 20H18C19.1046 20 20 19.1046 20 18V6C20 4.89543 19.1046 4 18 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20Z"
@@ -178,8 +158,6 @@ const AboutPage = () => {
           </div>
         </div>
       </section>
-
-
     </div>
   );
 };

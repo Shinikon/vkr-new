@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import ban3 from "../assets/img/ban3.png";
-
-import Footer from "../components/Footer";
 import {
   products,
   getCategories,

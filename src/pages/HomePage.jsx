@@ -13,11 +13,9 @@ const HomePage = () => {
     <div className="about-page">
       <ScrollAnimation />
 
-
       <div className="hero-section">
         <div className="container">
           <div className="hero-section__inner">
-
             <div className="hero-section__content">
               <h1 className="hero-section__title">
                 ФКП Авангард -
@@ -39,9 +37,8 @@ const HomePage = () => {
               </div>
             </div>
 
-
             <div className="hero-section__image">
-              <img src={ban1} alt="ФКП Авангард" />
+              <img src={ban1} alt="ФКП Авангард" loading="lazy" />
 
               <div className="hero-section__founded">
                 <span className="hero-section__founded-year">1943</span>
@@ -53,6 +50,7 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+
       <div className="advantages-section">
         <div className="container">
           <h2 className="advantages-section__title">Наши преимущества</h2>
@@ -63,7 +61,7 @@ const HomePage = () => {
           <div className="advantages-grid">
             <div className="advantage-card">
               <div className="advantage-card__icon">
-                <img src={quality} alt="Качество" />
+                <img src={quality} alt="Качество" loading="lazy" />
               </div>
               <h3 className="advantage-card__title">Качество</h3>
               <p className="advantage-card__text">
@@ -74,7 +72,11 @@ const HomePage = () => {
 
             <div className="advantage-card">
               <div className="advantage-card__icon">
-                <img src={equipment} alt="Современное оборудование" />
+                <img
+                  src={equipment}
+                  alt="Современное оборудование"
+                  loading="lazy"
+                />
               </div>
               <h3 className="advantage-card__title">
                 Современное оборудование
@@ -86,7 +88,7 @@ const HomePage = () => {
 
             <div className="advantage-card">
               <div className="advantage-card__icon">
-                <img src={team} alt="Опытная команда" />
+                <img src={team} alt="Опытная команда" loading="lazy" />
               </div>
               <h3 className="advantage-card__title">Опытная команда</h3>
               <p className="advantage-card__text">
@@ -96,6 +98,7 @@ const HomePage = () => {
           </div>
         </div>
       </div>
+
       <div className="stats-section">
         <div className="container">
           <div className="stats-section__inner">
@@ -131,7 +134,6 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-
     </div>
   );
 };
