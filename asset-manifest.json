@@ -1,19 +1,25 @@
 {
   "files": {
-    "main.css": "/vkr-new/static/css/main.38b77ae9.css",
-    "main.js": "/vkr-new/static/js/main.71e908ae.js",
+    "main.css": "/vkr-new/static/css/main.975d43b1.css",
+    "main.js": "/vkr-new/static/js/main.a1cae4b8.js",
+    "static/media/slide1.svg": "/vkr-new/static/media/slide1.a84e1222d2c9dc72125bed28ffa617f5.svg",
+    "static/media/slide6.svg": "/vkr-new/static/media/slide6.b25ba1d74eca6b11ab445c43b02ddcbd.svg",
+    "static/media/slide4.svg": "/vkr-new/static/media/slide4.b9e2e99ad6fa5c354065b6102965b131.svg",
+    "static/media/slide3.svg": "/vkr-new/static/media/slide3.db196dbad2f7047990c73220fd8a38eb.svg",
+    "static/media/slide2.svg": "/vkr-new/static/media/slide2.e07d428f0ece09b79751a21795e58156.svg",
     "static/media/ban3.png": "/vkr-new/static/media/ban3.353c2b91a92652cd24d6.png",
     "static/media/ифт1.png": "/vkr-new/static/media/ифт1.9785fd5dadfcef32a7c8.png",
     "static/media/zavod.png": "/vkr-new/static/media/zavod.67b0b3e4ac15f558d4e9.png",
+    "static/media/slide5.svg": "/vkr-new/static/media/slide5.ad7b104888ca3074c0bb4dfc7b9713b1.svg",
     "static/media/team-icon.svg": "/vkr-new/static/media/team-icon.09f06ce4ee545253f5cb4ace63198b78.svg",
     "static/media/equipment-icon.svg": "/vkr-new/static/media/equipment-icon.2f27f4cc8fcdfc83ec857c225581a035.svg",
     "static/media/quality-icon.svg": "/vkr-new/static/media/quality-icon.95aee9646d3cd75e326fdd16bf9ad035.svg",
     "index.html": "/vkr-new/index.html",
-    "main.38b77ae9.css.map": "/vkr-new/static/css/main.38b77ae9.css.map",
-    "main.71e908ae.js.map": "/vkr-new/static/js/main.71e908ae.js.map"
+    "main.975d43b1.css.map": "/vkr-new/static/css/main.975d43b1.css.map",
+    "main.a1cae4b8.js.map": "/vkr-new/static/js/main.a1cae4b8.js.map"
   },
   "entrypoints": [
-    "static/css/main.38b77ae9.css",
-    "static/js/main.71e908ae.js"
+    "static/css/main.975d43b1.css",
+    "static/js/main.a1cae4b8.js"
   ]
 }
