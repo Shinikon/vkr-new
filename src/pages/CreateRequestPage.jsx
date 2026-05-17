@@ -1,17 +1,22 @@
 import React, { useState } from "react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import { requestsDB, priorities } from "../data/requests";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../services/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 
 const CreateRequestPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    topic: "",
+    name: "",
+    workshop: "",
+    position: "",
     priority: "Средний",
-    date: "",
+    deadline: "",
+    title: "",
     description: "",
   });
-
-  const [requests, setRequests] = useState(requestsDB.getAllRequests());
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   const handleChange = (e) => {
     setFormData({
@@ -20,57 +25,117 @@ const CreateRequestPage = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setMessage("");
 
-    const newRequest = requestsDB.addRequest({
-      title: formData.topic,
-      status: "На рассмотрении",
+    const { data: userData } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", user?.email)
+      .single();
+
+    const newId = `№${Date.now().toString().slice(-6)}`;
+    const nameParts = formData.name.split(" ");
+    const initials = nameParts
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase();
+
+    const requestData = {
+      request_id: newId,
+      user_id: userData?.id,
+      name: formData.name,
+      initials: initials || "??",
+      workshop: formData.workshop,
+      position: formData.position,
       priority: formData.priority,
+      deadline: formData.deadline,
+      title: formData.title,
       description: formData.description,
-    });
+      status: "pending",
+    };
 
-    setRequests(requestsDB.getAllRequests());
+    const { error } = await supabase.from("requests").insert([requestData]);
 
-    console.log("Заявка отправлена:", newRequest);
-    alert(`Заявка ${newRequest.id} успешно отправлена!`);
-
-    setFormData({
-      topic: "",
-      priority: "Средний",
-      date: "",
-      description: "",
-    });
-  };
-
-  const getStatusClass = (status) => {
-    if (status === "Одобрено") return "status-approved";
-    if (status === "На рассмотрении") return "status-pending";
-    if (status === "Отклонено") return "status-rejected";
-    return "";
+    if (error) {
+      setMessage(`Ошибка: ${error.message}`);
+    } else {
+      setMessage(`Заявка ${newId} успешно создана!`);
+      setFormData({
+        name: "",
+        workshop: "",
+        position: "",
+        priority: "Средний",
+        deadline: "",
+        title: "",
+        description: "",
+      });
+      setTimeout(() => {
+        navigate("/approvals");
+      }, 2000);
+    }
+    setLoading(false);
   };
 
   return (
     <div className="create-request-page">
-      <Header />
-
       <div className="create-request-container">
-
         <div className="create-request-form">
           <h2 className="form-title">Новая заявка</h2>
 
+          {message && (
+            <div
+              className={
+                message.startsWith("Ошибка")
+                  ? "error-message"
+                  : "success-message"
+              }
+            >
+              {message}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label className="form-label">Тема запроса</label>
+              <label className="form-label">ФИО заявителя</label>
               <input
                 type="text"
-                name="topic"
+                name="name"
                 className="form-input"
-                placeholder="Закупка химреагентов"
-                value={formData.topic}
+                placeholder="Иванов Иван Иванович"
+                value={formData.name}
                 onChange={handleChange}
                 required
               />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Цех</label>
+                <input
+                  type="text"
+                  name="workshop"
+                  className="form-input"
+                  placeholder="Цех №2"
+                  value={formData.workshop}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Должность</label>
+                <input
+                  type="text"
+                  name="position"
+                  className="form-input"
+                  placeholder="Технолог"
+                  value={formData.position}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
             </div>
 
             <div className="form-row">
@@ -82,25 +147,35 @@ const CreateRequestPage = () => {
                   value={formData.priority}
                   onChange={handleChange}
                 >
-                  {priorities.map((p) => (
-                    <option key={p.value} value={p.value}>
-                      {p.label}
-                    </option>
-                  ))}
+                  <option>Высокий</option>
+                  <option>Средний</option>
+                  <option>Низкий</option>
                 </select>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Срок</label>
                 <input
-                  type="text"
-                  name="date"
+                  type="date"
+                  name="deadline"
                   className="form-input"
-                  placeholder="ДД.ММ.ГГГГ"
-                  value={formData.date}
+                  value={formData.deadline}
                   onChange={handleChange}
+                  required
                 />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Тема запроса</label>
+              <input
+                type="text"
+                name="title"
+                className="form-input"
+                placeholder="Краткое описание"
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className="form-group">
@@ -108,50 +183,57 @@ const CreateRequestPage = () => {
               <textarea
                 name="description"
                 className="form-textarea"
-                placeholder="Подробности..."
-                rows="4"
+                placeholder="Подробное описание..."
+                rows="5"
                 value={formData.description}
                 onChange={handleChange}
+                required
               />
             </div>
 
-            <button type="submit" className="submit-btn">
-              Отправить в систему
+            <button type="submit" className="submit-btn" disabled={loading}>
+              {loading ? "Отправка..." : "Отправить в систему"}
             </button>
           </form>
         </div>
 
         <div className="create-request-list">
-          <h2 className="list-title">Активные обращения</h2>
-
+          <h3 className="list-title">Активные обращения</h3>
           <div className="requests-table">
             <div className="table-header">
               <div className="col-id">ID</div>
               <div className="col-title">Тема/статус</div>
               <div className="col-date">Обновлено</div>
             </div>
-
             <div className="table-body">
-              {requests.map((request, index) => (
-                <div key={index} className="table-row">
-                  <div className="col-id">{request.id}</div>
-                  <div className="col-title">
-                    <span className="request-title">{request.title}</span>
-                    <span
-                      className={`request-status ${getStatusClass(request.status)}`}
-                    >
-                      {request.status}
-                    </span>
-                  </div>
-                  <div className="col-date">{request.date}</div>
+              <div className="table-row">
+                <div className="col-id">№10243</div>
+                <div className="col-title">
+                  <span className="request-title">
+                    Замена картриджей в бухгалтерии
+                  </span>
+                  <span className="request-status status-pending">
+                    На рассмотрении
+                  </span>
                 </div>
-              ))}
+                <div className="col-date">Сегодня, 9:12</div>
+              </div>
+              <div className="table-row">
+                <div className="col-id">№10212</div>
+                <div className="col-title">
+                  <span className="request-title">
+                    Выдача новой спецодежды (Ц-2)
+                  </span>
+                  <span className="request-status status-approved">
+                    Одобрено
+                  </span>
+                </div>
+                <div className="col-date">12.04.2026</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      <Footer />
     </div>
   );
 };

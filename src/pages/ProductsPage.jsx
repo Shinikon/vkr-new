@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Header from "../components/Header";
+
 import Footer from "../components/Footer";
 import {
   products,
@@ -52,7 +52,7 @@ const ProductsPage = () => {
 
   return (
     <div className="products-page">
-      <Header />
+
 
       <section className="products-hero">
         <div className="container">
@@ -226,7 +226,7 @@ const ProductsPage = () => {
         </div>
       </div>
 
-      <Footer />
+
     </div>
   );
 };

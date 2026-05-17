@@ -1,74 +1,80 @@
 import React, { useState } from "react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const AuthPage = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { login, userRole } = useAuth();
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login submitted:", formData);
-    alert("Вход выполнен!");
+    setError("");
+    setLoading(true);
+
+    try {
+      await login(email, password);
+      if (userRole === "admin" || userRole === "manager") {
+        navigate("/approvals");
+      } else {
+        navigate("/request");
+      }
+    } catch (err) {
+      setError("Неверный email или пароль");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="auth-page">
-      <Header />
+      <div className="auth-section">
+        <div className="auth-card">
+          <h2 className="auth-card__title">Вход для сотрудников</h2>
+          <p className="auth-card__subtitle">
+            Введите свои учётные данные для доступа к системе
+          </p>
 
-      <section className="auth-section">
-        <div className="container">
-          <div className="auth-card">
-            <h1 className="auth-card__title">Вход для сотрудников</h1>
-            <p className="auth-card__subtitle">
-              Введите свои учётные данные для доступа к системе
-            </p>
+          {error && <div className="auth-error">{error}</div>}
 
-            <form className="auth-form" onSubmit={handleSubmit}>
-              <div className="auth-form__field">
-                <label className="auth-form__label">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  className="auth-form__input"
-                  placeholder="ivan@example.com"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+          <form className="auth-form" onSubmit={handleSubmit}>
+            <div className="auth-form__field">
+              <label className="auth-form__label">Email</label>
+              <input
+                type="email"
+                className="auth-form__input"
+                placeholder="ivan@avangard.ru"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
 
-              <div className="auth-form__field">
-                <label className="auth-form__label">Пароль</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="auth-form__input"
-                  placeholder=""
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
+            <div className="auth-form__field">
+              <label className="auth-form__label">Пароль</label>
+              <input
+                type="password"
+                className="auth-form__input"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
 
-              <button type="submit" className="auth-form__button">
-                Войти
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              className="auth-form__button"
+              disabled={loading}
+            >
+              {loading ? "Вход..." : "Войти"}
+            </button>
+          </form>
         </div>
-      </section>
-
-      <Footer />
+      </div>
     </div>
   );
 };

@@ -31,7 +31,7 @@ const ContactPage = () => {
 
   return (
     <div className="contact-page">
-      <Header />
+
 
 
       <section className="contact-section">
@@ -158,7 +158,7 @@ const ContactPage = () => {
         </div>
       </section>
 
-      <Footer />
+
     </div>
   );
 };

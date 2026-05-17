@@ -8,7 +8,7 @@ const AboutPage = () => {
   return (
     <div className="page about-page">
       <ScrollAnimation />
-      <Header />
+
 
 
       <section
@@ -179,7 +179,7 @@ const AboutPage = () => {
         </div>
       </section>
 
-      <Footer />
+
     </div>
   );
 };

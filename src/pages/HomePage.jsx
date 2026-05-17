@@ -12,7 +12,7 @@ const HomePage = () => {
   return (
     <div className="about-page">
       <ScrollAnimation />
-      <Header />
+
 
       <div className="hero-section">
         <div className="container">
@@ -131,7 +131,7 @@ const HomePage = () => {
           </div>
         </div>
       </div>
-      <Footer />
+
     </div>
   );
 };
