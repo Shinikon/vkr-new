@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ban3 from "../assets/img/ban3.png";
 
 import Footer from "../components/Footer";
 import {
@@ -52,11 +53,11 @@ const ProductsPage = () => {
 
   return (
     <div className="products-page">
-
-
-      <section className="products-hero">
+      <section
+        className="products-hero"
+        style={{ backgroundImage: `url(${ban3})` }}
+      >
         <div className="container">
-          <div className="products-hero__tag">ФКП Авангард</div>
           <h1 className="products-hero__title">Наша продукция</h1>
         </div>
       </section>
@@ -225,8 +226,6 @@ const ProductsPage = () => {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 };

@@ -7,55 +7,8 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        setUser(user);
-
-        if (user) {
-          const { data } = await supabase
-            .from("users")
-            .select("role")
-            .eq("email", user.email)
-            .maybeSingle();
-          setUserRole(data?.role || "employee");
-        }
-      } catch (error) {
-        console.error("Ошибка:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        const { data } = await supabase
-          .from("users")
-          .select("role")
-          .eq("email", session.user.email)
-          .maybeSingle();
-        setUserRole(data?.role || "employee");
-      } else {
-        setUserRole(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
+  const [userRole, setUserRole] = useState("admin");
+  const [loading, setLoading] = useState(false);
 
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -63,30 +16,35 @@ export const AuthProvider = ({ children }) => {
       password,
     });
     if (error) throw error;
+    setUser(data.user);
+
+    // Получаем роль из таблицы users
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("email", email)
+      .maybeSingle();
+    setUserRole(userData?.role || "employee");
+
     return data;
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await supabase.auth.signOut();
     setUser(null);
-    setUserRole(null);
+    setUserRole("employee");
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        userRole,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-        canAccessApprovals: userRole === "manager" || userRole === "admin",
-        canAccessAdmin: userRole === "admin",
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    userRole,
+    loading: false,
+    login,
+    logout,
+    isAuthenticated: !!user,
+    canAccessApprovals: userRole === "manager" || userRole === "admin",
+    canAccessAdmin: userRole === "admin",
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

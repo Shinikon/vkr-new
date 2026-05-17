@@ -3,11 +3,12 @@ import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 
 const ApprovalsPage = () => {
-  const { user, userRole } = useAuth();
+  const { userRole } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [comments, setComments] = useState({});
+  const [savingComment, setSavingComment] = useState(null);
 
   useEffect(() => {
     loadRequests();
@@ -15,33 +16,53 @@ const ApprovalsPage = () => {
 
   const loadRequests = async () => {
     setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("requests")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    let query = supabase
-      .from("requests")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (userRole === "employee") {
-      const { data: currentUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", user?.email)
-        .single();
-      if (currentUser) {
-        query = query.eq("user_id", currentUser.id);
-      }
+      if (error) throw error;
+      setRequests(data || []);
+    } catch (err) {
+      console.error("Ошибка загрузки:", err);
+    } finally {
+      setLoading(false);
     }
-
-    const { data } = await query;
-    setRequests(data || []);
-    setLoading(false);
   };
 
   const updateStatus = async (id, status) => {
     setUpdating(id);
-    await supabase.from("requests").update({ status }).eq("id", id);
-    await loadRequests();
-    setUpdating(null);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .update({ status })
+        .eq("id", id);
+      if (error) throw error;
+      await loadRequests();
+    } catch (err) {
+      console.error("Ошибка обновления:", err);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const saveComment = async (id, comment) => {
+    if (!comment || comment.trim() === "") return;
+    setSavingComment(id);
+    try {
+      const { error } = await supabase
+        .from("requests")
+        .update({ comment })
+        .eq("id", id);
+      if (error) throw error;
+      setComments((prev) => ({ ...prev, [id]: "" }));
+      await loadRequests();
+    } catch (err) {
+      console.error("Ошибка сохранения комментария:", err);
+    } finally {
+      setSavingComment(null);
+    }
   };
 
   const handleCommentChange = (id, value) => {
@@ -49,36 +70,21 @@ const ApprovalsPage = () => {
   };
 
   const getPriorityClass = (priority) => {
-    switch (priority) {
-      case "Высокий":
-        return "priority-high";
-      case "Средний":
-        return "priority-medium";
-      default:
-        return "priority-low";
-    }
+    if (priority === "Высокий") return "priority-high";
+    if (priority === "Средний") return "priority-medium";
+    return "priority-low";
   };
 
   const getStatusClass = (status) => {
-    switch (status) {
-      case "approved":
-        return "status-approved";
-      case "rejected":
-        return "status-rejected";
-      default:
-        return "status-pending";
-    }
+    if (status === "approved") return "status-approved";
+    if (status === "rejected") return "status-rejected";
+    return "status-pending";
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case "approved":
-        return "Одобрено";
-      case "rejected":
-        return "Отклонено";
-      default:
-        return "На рассмотрении";
-    }
+    if (status === "approved") return "Одобрено";
+    if (status === "rejected") return "Отклонено";
+    return "На рассмотрении";
   };
 
   if (loading) {
@@ -89,6 +95,8 @@ const ApprovalsPage = () => {
       </div>
     );
   }
+
+  const canEdit = userRole === "manager" || userRole === "admin";
 
   return (
     <div className="approvals-page">
@@ -102,11 +110,7 @@ const ApprovalsPage = () => {
 
         <div className="approvals-list">
           {requests.length === 0 ? (
-            <div className="approval-card">
-              <p style={{ textAlign: "center", padding: "20px" }}>
-                Нет активных заявок
-              </p>
-            </div>
+            <div className="empty-list">Нет активных заявок</div>
           ) : (
             requests.map((request) => (
               <div key={request.id} className="approval-card">
@@ -142,17 +146,47 @@ const ApprovalsPage = () => {
                   <p className="approval-card__description">
                     {request.description}
                   </p>
-                  <div className="approval-card__comment">
-                    <textarea
-                      className="approval-card__textarea"
-                      placeholder="Комментарий для сотрудника..."
-                      value={comments[request.id] || ""}
-                      onChange={(e) =>
-                        handleCommentChange(request.id, e.target.value)
-                      }
-                      rows="2"
-                    />
-                  </div>
+
+                  {request.comment && (
+                    <div className="approval-card__saved-comment">
+                      <strong>Комментарий:</strong>
+                      <p>{request.comment}</p>
+                    </div>
+                  )}
+
+                  {canEdit && (
+                    <div className="approval-card__comment">
+                      <textarea
+                        className="approval-card__textarea"
+                        placeholder="Введите комментарий к заявке..."
+                        value={
+                          comments[request.id] !== undefined
+                            ? comments[request.id]
+                            : request.comment || ""
+                        }
+                        onChange={(e) =>
+                          handleCommentChange(request.id, e.target.value)
+                        }
+                        rows="3"
+                      />
+                      <button
+                        className="comment-save-btn"
+                        onClick={() =>
+                          saveComment(
+                            request.id,
+                            comments[request.id] !== undefined
+                              ? comments[request.id]
+                              : request.comment || "",
+                          )
+                        }
+                        disabled={savingComment === request.id}
+                      >
+                        {savingComment === request.id
+                          ? "Сохранение..."
+                          : "Сохранить комментарий"}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="approval-card__status">
@@ -163,29 +197,31 @@ const ApprovalsPage = () => {
                   </span>
                 </div>
 
-                <div className="approval-card__actions">
-                  <button
-                    className={`approval-card__btn approval-card__btn--approved ${request.status === "approved" ? "approval-card__btn--active" : ""}`}
-                    onClick={() => updateStatus(request.id, "approved")}
-                    disabled={updating === request.id}
-                  >
-                    Одобрено
-                  </button>
-                  <button
-                    className={`approval-card__btn approval-card__btn--pending ${request.status === "pending" ? "approval-card__btn--active" : ""}`}
-                    onClick={() => updateStatus(request.id, "pending")}
-                    disabled={updating === request.id}
-                  >
-                    На рассмотрении
-                  </button>
-                  <button
-                    className={`approval-card__btn approval-card__btn--rejected ${request.status === "rejected" ? "approval-card__btn--active" : ""}`}
-                    onClick={() => updateStatus(request.id, "rejected")}
-                    disabled={updating === request.id}
-                  >
-                    Отклонить
-                  </button>
-                </div>
+                {canEdit && (
+                  <div className="approval-card__actions">
+                    <button
+                      className={`approval-card__btn approval-card__btn--approved`}
+                      onClick={() => updateStatus(request.id, "approved")}
+                      disabled={updating === request.id}
+                    >
+                      Одобрено
+                    </button>
+                    <button
+                      className={`approval-card__btn approval-card__btn--pending`}
+                      onClick={() => updateStatus(request.id, "pending")}
+                      disabled={updating === request.id}
+                    >
+                      На рассмотрении
+                    </button>
+                    <button
+                      className={`approval-card__btn approval-card__btn--rejected`}
+                      onClick={() => updateStatus(request.id, "rejected")}
+                      disabled={updating === request.id}
+                    >
+                      Отклонить
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           )}

@@ -23,18 +23,31 @@ const AdminPanel = () => {
 
   const loadRequests = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("requests")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setRequests(data);
+
+    if (error) {
+      console.error("Ошибка загрузки заявок:", error);
+    } else {
+      setRequests(data || []);
+    }
     setLoading(false);
   };
 
   const loadUsers = async () => {
     setLoading(true);
-    const { data } = await supabase.from("users").select("*");
-    if (data) setUsers(data);
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Ошибка загрузки пользователей:", error);
+    } else {
+      setUsers(data || []);
+    }
     setLoading(false);
   };
 
@@ -71,109 +84,108 @@ const AdminPanel = () => {
 
     const password = generateRandomPassword();
 
-    const { error } = await supabase.from("users").insert([
-      {
-        email: newUser.email,
-        full_name: newUser.full_name,
-        role: newUser.role,
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: newUser.email,
+      password: password,
+      options: {
+        data: { full_name: newUser.full_name },
       },
-    ]);
+    });
 
-    if (error) {
-      setMessage(`Ошибка: ${error.message}`);
-    } else {
-      setMessage(`Пользователь ${newUser.email} добавлен! Пароль: ${password}`);
-      setNewUser({ email: "", full_name: "", role: "employee" });
-      loadUsers();
+    if (authError) {
+      if (authError.message.includes("rate limit")) {
+        setMessage("Достигнут лимит запросов. Попробуйте позже.");
+      } else {
+        setMessage(`Ошибка: ${authError.message}`);
+      }
+      setTimeout(() => setMessage(""), 5000);
+      return;
+    }
+
+    if (authData.user) {
+      const { error: insertError } = await supabase.from("users").insert([
+        {
+          id: authData.user.id,
+          email: newUser.email,
+          full_name: newUser.full_name,
+          role: newUser.role,
+        },
+      ]);
+
+      if (insertError) {
+        setMessage(`Ошибка: ${insertError.message}`);
+      } else {
+        setMessage(
+          `Пользователь ${newUser.email} добавлен! Пароль: ${password}`,
+        );
+        setNewUser({ email: "", full_name: "", role: "employee" });
+        loadUsers();
+      }
     }
     setTimeout(() => setMessage(""), 5000);
   };
 
   const updateUserRole = async (id, newRole) => {
-    await supabase.from("users").update({ role: newRole }).eq("id", id);
-    setMessage("Роль пользователя изменена");
-    loadUsers();
+    const { error } = await supabase
+      .from("users")
+      .update({ role: newRole })
+      .eq("id", id);
+    if (!error) {
+      setMessage("Роль пользователя изменена");
+      loadUsers();
+    }
     setTimeout(() => setMessage(""), 3000);
   };
 
-  const deleteUser = async (id, email) => {
-    if (window.confirm(`Удалить пользователя ${email}?`)) {
-      await supabase.from("users").delete().eq("id", id);
-      setMessage(`Пользователь ${email} удалён`);
-      loadUsers();
-      setTimeout(() => setMessage(""), 3000);
-    }
-  };
-
   const updateRequestStatus = async (id, status) => {
-    await supabase.from("requests").update({ status }).eq("id", id);
-    setMessage("Статус заявки изменён");
-    loadRequests();
+    const { error } = await supabase
+      .from("requests")
+      .update({ status })
+      .eq("id", id);
+    if (!error) {
+      setMessage("Статус заявки изменён");
+      loadRequests();
+    }
     setTimeout(() => setMessage(""), 3000);
   };
 
   const deleteRequest = async (id) => {
-    if (window.confirm("Удалить эту заявку?")) {
+    if (window.confirm("Удалить заявку?")) {
       await supabase.from("requests").delete().eq("id", id);
-      setMessage("Заявка удалена");
       loadRequests();
+      setMessage("Заявка удалена");
       setTimeout(() => setMessage(""), 3000);
     }
   };
 
   const getStatusClass = (status) => {
-    switch (status) {
-      case "approved":
-        return "status-approved";
-      case "rejected":
-        return "status-rejected";
-      default:
-        return "status-pending";
-    }
+    if (status === "approved") return "status-approved";
+    if (status === "rejected") return "status-rejected";
+    return "status-pending";
   };
 
   const getStatusText = (status) => {
-    switch (status) {
-      case "approved":
-        return "Одобрено";
-      case "rejected":
-        return "Отклонено";
-      default:
-        return "На рассмотрении";
-    }
+    if (status === "approved") return "Одобрено";
+    if (status === "rejected") return "Отклонено";
+    return "На рассмотрении";
   };
 
   const getPriorityClass = (priority) => {
-    switch (priority) {
-      case "Высокий":
-        return "priority-high";
-      case "Средний":
-        return "priority-medium";
-      default:
-        return "priority-low";
-    }
+    if (priority === "Высокий") return "priority-high";
+    if (priority === "Средний") return "priority-medium";
+    return "priority-low";
   };
 
   const getRoleClass = (role) => {
-    switch (role) {
-      case "admin":
-        return "role-admin";
-      case "manager":
-        return "role-manager";
-      default:
-        return "role-employee";
-    }
+    if (role === "admin") return "role-admin";
+    if (role === "manager") return "role-manager";
+    return "role-employee";
   };
 
   const getRoleText = (role) => {
-    switch (role) {
-      case "admin":
-        return "Администратор";
-      case "manager":
-        return "Менеджер";
-      default:
-        return "Сотрудник";
-    }
+    if (role === "admin") return "Администратор";
+    if (role === "manager") return "Менеджер";
+    return "Сотрудник";
   };
 
   const stats = {
@@ -184,31 +196,14 @@ const AdminPanel = () => {
   };
 
   if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Загрузка...</p>
-      </div>
-    );
+    return <div className="loading-container">Загрузка...</div>;
   }
 
   return (
     <div className="admin-panel">
       <div className="container">
-        <div className="admin-header">
-          <h1>Панель управления</h1>
-          <p className="admin-subtitle">
-            Управление заявками и пользователями системы
-          </p>
-        </div>
-
-        {message && (
-          <div
-            className={`admin-message ${message.includes("Ошибка") ? "error" : ""}`}
-          >
-            {message}
-          </div>
-        )}
+        <h1>Панель управления</h1>
+        {message && <div className="admin-message">{message}</div>}
 
         <div className="admin-stats">
           <div className="stat-card">
@@ -246,7 +241,7 @@ const AdminPanel = () => {
             className={`tab-btn ${activeTab === "add-user" ? "active" : ""}`}
             onClick={() => setActiveTab("add-user")}
           >
-            Добавить пользователя
+            Добавить
           </button>
         </div>
 
@@ -255,63 +250,46 @@ const AdminPanel = () => {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Номер</th>
+                  <th>№</th>
                   <th>Заявитель</th>
                   <th>Тема</th>
-                  <th>Приоритет</th>
                   <th>Статус</th>
                   <th>Действия</th>
                 </tr>
               </thead>
               <tbody>
-                {requests.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="empty-row">
-                      Нет заявок
+                {requests.map((req) => (
+                  <tr key={req.id}>
+                    <td className="request-id">{req.request_id}</td>
+                    <td>{req.name}</td>
+                    <td>{req.title}</td>
+                    <td>
+                      <span
+                        className={`status-badge ${getStatusClass(req.status)}`}
+                      >
+                        {getStatusText(req.status)}
+                      </span>
+                    </td>
+                    <td className="actions-cell">
+                      <select
+                        onChange={(e) =>
+                          updateRequestStatus(req.id, e.target.value)
+                        }
+                        value={req.status}
+                      >
+                        <option value="pending">На рассмотрении</option>
+                        <option value="approved">Одобрено</option>
+                        <option value="rejected">Отклонено</option>
+                      </select>
+                      <button
+                        onClick={() => deleteRequest(req.id)}
+                        className="delete-btn"
+                      >
+                        Удалить
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  requests.map((request) => (
-                    <tr key={request.id}>
-                      <td className="request-id">{request.request_id}</td>
-                      <td>{request.name}</td>
-                      <td>{request.title}</td>
-                      <td>
-                        <span
-                          className={`priority-badge ${getPriorityClass(request.priority)}`}
-                        >
-                          {request.priority}
-                        </span>
-                      </td>
-                      <td>
-                        <span
-                          className={`status-badge ${getStatusClass(request.status)}`}
-                        >
-                          {getStatusText(request.status)}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        <select
-                          value={request.status}
-                          onChange={(e) =>
-                            updateRequestStatus(request.id, e.target.value)
-                          }
-                          className="status-select"
-                        >
-                          <option value="pending">На рассмотрении</option>
-                          <option value="approved">Одобрено</option>
-                          <option value="rejected">Отклонено</option>
-                        </select>
-                        <button
-                          onClick={() => deleteRequest(request.id)}
-                          className="delete-btn"
-                        >
-                          Удалить
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
@@ -329,111 +307,62 @@ const AdminPanel = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="empty-row">
-                      Нет пользователей
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.email}</td>
+                    <td>{u.full_name}</td>
+                    <td>
+                      <span className={`role-badge ${getRoleClass(u.role)}`}>
+                        {getRoleText(u.role)}
+                      </span>
+                    </td>
+                    <td className="actions-cell">
+                      <select
+                        onChange={(e) => updateUserRole(u.id, e.target.value)}
+                        value={u.role}
+                      >
+                        <option value="employee">Сотрудник</option>
+                        <option value="manager">Менеджер</option>
+                        <option value="admin">Админ</option>
+                      </select>
                     </td>
                   </tr>
-                ) : (
-                  users.map((user) => (
-                    <tr key={user.id}>
-                      <td>{user.email}</td>
-                      <td>{user.full_name}</td>
-                      <td>
-                        <span
-                          className={`role-badge ${getRoleClass(user.role)}`}
-                        >
-                          {getRoleText(user.role)}
-                        </span>
-                      </td>
-                      <td className="actions-cell">
-                        <select
-                          value={user.role}
-                          onChange={(e) =>
-                            updateUserRole(user.id, e.target.value)
-                          }
-                          className="role-select"
-                        >
-                          <option value="employee">Сотрудник</option>
-                          <option value="manager">Менеджер</option>
-                          <option value="admin">Администратор</option>
-                        </select>
-                        <button
-                          onClick={() => deleteUser(user.id, user.email)}
-                          className="delete-btn"
-                        >
-                          Удалить
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         )}
 
         {activeTab === "add-user" && (
-          <div className="add-user-section">
-            <form onSubmit={addUser} className="add-user-form">
-              <div className="form-group">
-                <label className="form-label">Email</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  value={newUser.email}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, email: e.target.value })
-                  }
-                  placeholder="user@avangard.ru"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">ФИО</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newUser.full_name}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, full_name: e.target.value })
-                  }
-                  placeholder="Иванов Иван Иванович"
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Роль</label>
-                <select
-                  className="form-select"
-                  value={newUser.role}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, role: e.target.value })
-                  }
-                >
-                  <option value="employee">Сотрудник</option>
-                  <option value="manager">Менеджер</option>
-                  <option value="admin">Администратор</option>
-                </select>
-              </div>
-              <button type="submit" className="submit-btn">
-                Добавить пользователя
-              </button>
-            </form>
-            <p
-              className="info-text"
-              style={{
-                textAlign: "center",
-                marginTop: "16px",
-                fontSize: "12px",
-                color: "#666",
-              }}
+          <form onSubmit={addUser} className="add-user-form">
+            <input
+              type="email"
+              placeholder="Email"
+              value={newUser.email}
+              onChange={(e) =>
+                setNewUser({ ...newUser, email: e.target.value })
+              }
+              required
+            />
+            <input
+              type="text"
+              placeholder="ФИО"
+              value={newUser.full_name}
+              onChange={(e) =>
+                setNewUser({ ...newUser, full_name: e.target.value })
+              }
+              required
+            />
+            <select
+              value={newUser.role}
+              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
             >
-              При добавлении пользователя генерируется случайный пароль, который
-              отображается в сообщении.
-            </p>
-          </div>
+              <option value="employee">Сотрудник</option>
+              <option value="manager">Менеджер</option>
+              <option value="admin">Администратор</option>
+            </select>
+            <button type="submit">Добавить пользователя</button>
+          </form>
         )}
       </div>
     </div>
