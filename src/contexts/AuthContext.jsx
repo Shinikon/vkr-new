@@ -7,8 +7,33 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [userRole, setUserRole] = useState("admin");
-  const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState("employee");
+  const [loading, setLoading] = useState(false); // <-- сразу false
+
+  useEffect(() => {
+    const getUser = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        setUser(user);
+
+        if (user) {
+          const { data } = await supabase
+            .from("users")
+            .select("role")
+            .eq("email", user.email)
+            .maybeSingle();
+          setUserRole(data?.role || "employee");
+        }
+      } catch (err) {
+        console.error("Ошибка:", err);
+      }
+      // setLoading(false) - не нужно
+    };
+
+    getUser();
+  }, []);
 
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -18,7 +43,6 @@ export const AuthProvider = ({ children }) => {
     if (error) throw error;
     setUser(data.user);
 
-    // Получаем роль из таблицы users
     const { data: userData } = await supabase
       .from("users")
       .select("role")
@@ -30,21 +54,31 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setUserRole("employee");
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Ошибка выхода:", err);
+    } finally {
+      setUser(null);
+      setUserRole("employee");
+      localStorage.removeItem("supabase.auth.token");
+    }
   };
 
-  const value = {
-    user,
-    userRole,
-    loading: false,
-    login,
-    logout,
-    isAuthenticated: !!user,
-    canAccessApprovals: userRole === "manager" || userRole === "admin",
-    canAccessAdmin: userRole === "admin",
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        userRole,
+        loading: false, // <-- принудительно false
+        login,
+        logout,
+        isAuthenticated: !!user,
+        canAccessApprovals: userRole === "manager" || userRole === "admin",
+        canAccessAdmin: userRole === "admin",
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

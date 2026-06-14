@@ -72,9 +72,9 @@ const AdminPanel = () => {
       const from = (usersPage - 1) * itemsPerPage;
       const to = usersPage * itemsPerPage - 1;
 
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from("users")
-        .select("*", { count: "exact" })
+        .select("*")
         .order("created_at", { ascending: false })
         .range(from, to);
 
@@ -148,6 +148,11 @@ const AdminPanel = () => {
       return;
     }
 
+    setMessage("Добавление пользователя...");
+
+    // Задержка 3 секунды перед запросом (чтобы избежать rate limit)
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
     try {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: newUser.email,
@@ -158,8 +163,11 @@ const AdminPanel = () => {
       });
 
       if (authError) {
-        if (authError.message.includes("rate limit")) {
-          setMessage("Слишком много попыток. Подождите минуту.");
+        if (
+          authError.message.includes("rate limit") ||
+          authError.status === 429
+        ) {
+          setMessage("Слишком много попыток. Подождите 2-3 минуты.");
         } else {
           setMessage(`Ошибка: ${authError.message}`);
         }

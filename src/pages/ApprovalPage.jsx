@@ -1,115 +1,149 @@
-import React, { useState, useCallback } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../services/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
+import { getCached, setCached } from "../services/cache";
 
 const ApprovalsPage = () => {
   const { userRole } = useAuth();
-  const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [comments, setComments] = useState({});
-  const [savingCommentId, setSavingCommentId] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
-  const itemsPerPage = 15;
+  const [savingCommentId, setSavingCommentId] = useState(null);
+  const [comments, setComments] = useState({});
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 5;
 
-  // Запрос заявок с пагинацией
-  const { data, isLoading, isFetchingNextPage } = useQuery({
-    queryKey: ["requests", page],
-    queryFn: async () => {
+  const loadRequests = async (isInitial = true) => {
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
       const from = (page - 1) * itemsPerPage;
       const to = page * itemsPerPage - 1;
+      const cacheKey = `requests_page_${page}_role_${userRole}`;
 
-      const { data, error, count } = await supabase
+      // Проверяем кэш
+      if (isInitial) {
+        const cached = getCached(cacheKey, 30000);
+        if (cached) {
+          setRequests(cached.data);
+          setTotalCount(cached.totalCount);
+          setHasMore(cached.hasMore);
+          setLoading(false);
+          return;
+        }
+      }
+
+      let query = supabase
         .from("requests")
-        .select(
-          "id, request_id, name, initials, workshop, position, priority, deadline, title, description, status, comment, created_at",
-          { count: "exact" },
-        )
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
 
+      if (userRole === "employee") {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("id")
+          .eq("email", (await supabase.auth.getUser()).data.user?.email)
+          .maybeSingle();
+        if (userData) {
+          query = query.eq("user_id", userData.id);
+        }
+      }
+
+      const { data, error, count } = await query;
+
       if (error) throw error;
-      return {
-        data: data || [],
-        totalCount: count || 0,
-        hasMore: data?.length === itemsPerPage,
-      };
-    },
-    staleTime: 30000,
-  });
 
-  const requests = data?.data || [];
-  const totalCount = data?.totalCount || 0;
-  const hasMore = data?.hasMore || false;
+      const resultData = data || [];
+      const resultHasMore = data?.length === itemsPerPage;
 
-  // Мутация обновления статуса
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }) => {
+      // Сохраняем в кэш
+      if (isInitial) {
+        setCached(cacheKey, {
+          data: resultData,
+          totalCount: count || 0,
+          hasMore: resultHasMore,
+        });
+      }
+
+      if (isInitial) {
+        setRequests(resultData);
+      } else {
+        setRequests((prev) => [...prev, ...resultData]);
+      }
+
+      setTotalCount(count || 0);
+      setHasMore(resultHasMore);
+    } catch (err) {
+      console.error("Ошибка загрузки:", err);
+    } finally {
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    loadRequests(true);
+  }, []);
+
+  useEffect(() => {
+    if (page > 1) {
+      loadRequests(false);
+    }
+  }, [page]);
+
+  const updateStatus = async (id, status) => {
+    setUpdatingId(id);
+    try {
       const { error } = await supabase
         .from("requests")
         .update({ status })
         .eq("id", id);
       if (error) throw error;
-      return { id, status };
-    },
-    onMutate: async ({ id, status }) => {
-      await queryClient.cancelQueries({ queryKey: ["requests", page] });
-      const previousRequests = queryClient.getQueryData(["requests", page]);
-      queryClient.setQueryData(["requests", page], (old) => ({
-        ...old,
-        data:
-          old?.data?.map((req) => (req.id === id ? { ...req, status } : req)) ||
-          [],
-      }));
-      return { previousRequests };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousRequests) {
-        queryClient.setQueryData(["requests", page], context.previousRequests);
-      }
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests", page] });
-      setUpdatingId(null);
-    },
-  });
 
-  // Мутация сохранения комментария
-  const saveCommentMutation = useMutation({
-    mutationFn: async ({ id, comment }) => {
+      setRequests((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, status } : req)),
+      );
+    } catch (err) {
+      console.error("Ошибка обновления:", err);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const saveComment = async (id, comment) => {
+    if (!comment || comment.trim() === "") return;
+    setSavingCommentId(id);
+    try {
       const { error } = await supabase
         .from("requests")
         .update({ comment })
         .eq("id", id);
       if (error) throw error;
-      return { id, comment };
-    },
-    onMutate: async ({ id, comment }) => {
-      await queryClient.cancelQueries({ queryKey: ["requests", page] });
-      queryClient.setQueryData(["requests", page], (old) => ({
-        ...old,
-        data:
-          old?.data?.map((req) =>
-            req.id === id ? { ...req, comment } : req,
-          ) || [],
-      }));
-      setComments((prev) => ({ ...prev, [id]: "" }));
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["requests", page] });
-      setSavingCommentId(null);
-    },
-  });
 
-  const handleUpdateStatus = (id, status) => {
-    setUpdatingId(id);
-    updateStatusMutation.mutate({ id, status });
+      setRequests((prev) =>
+        prev.map((req) => (req.id === id ? { ...req, comment } : req)),
+      );
+      setComments((prev) => ({ ...prev, [id]: "" }));
+    } catch (err) {
+      console.error("Ошибка сохранения комментария:", err);
+    } finally {
+      setSavingCommentId(null);
+    }
   };
 
-  const handleSaveComment = (id, comment) => {
-    if (!comment || comment.trim() === "") return;
-    setSavingCommentId(id);
-    saveCommentMutation.mutate({ id, comment });
+  const handleCommentChange = (id, value) => {
+    setComments((prev) => ({ ...prev, [id]: value }));
   };
 
   const getPriorityClass = (priority) => {
@@ -132,7 +166,7 @@ const ApprovalsPage = () => {
 
   const canEdit = userRole === "manager" || userRole === "admin";
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="approvals-page">
         <div className="container">
@@ -222,17 +256,14 @@ const ApprovalsPage = () => {
                               : request.comment || ""
                           }
                           onChange={(e) =>
-                            setComments((prev) => ({
-                              ...prev,
-                              [request.id]: e.target.value,
-                            }))
+                            handleCommentChange(request.id, e.target.value)
                           }
                           rows="2"
                         />
                         <button
                           className="comment-save-btn"
                           onClick={() =>
-                            handleSaveComment(
+                            saveComment(
                               request.id,
                               comments[request.id] !== undefined
                                 ? comments[request.id]
@@ -261,27 +292,21 @@ const ApprovalsPage = () => {
                     <div className="approval-card__actions">
                       <button
                         className="approval-card__btn approval-card__btn--approved"
-                        onClick={() =>
-                          handleUpdateStatus(request.id, "approved")
-                        }
+                        onClick={() => updateStatus(request.id, "approved")}
                         disabled={updatingId === request.id}
                       >
                         Одобрено
                       </button>
                       <button
                         className="approval-card__btn approval-card__btn--pending"
-                        onClick={() =>
-                          handleUpdateStatus(request.id, "pending")
-                        }
+                        onClick={() => updateStatus(request.id, "pending")}
                         disabled={updatingId === request.id}
                       >
                         На рассмотрении
                       </button>
                       <button
                         className="approval-card__btn approval-card__btn--rejected"
-                        onClick={() =>
-                          handleUpdateStatus(request.id, "rejected")
-                        }
+                        onClick={() => updateStatus(request.id, "rejected")}
                         disabled={updatingId === request.id}
                       >
                         Отклонить
@@ -297,9 +322,9 @@ const ApprovalsPage = () => {
                 <button
                   className="load-more-btn"
                   onClick={() => setPage((p) => p + 1)}
-                  disabled={isFetchingNextPage}
+                  disabled={loadingMore}
                 >
-                  {isFetchingNextPage ? "Загрузка..." : "Загрузить ещё"}
+                  {loadingMore ? "Загрузка..." : "Загрузить ещё"}
                 </button>
               </div>
             )}
