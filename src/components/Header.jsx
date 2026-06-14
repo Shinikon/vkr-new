@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import styles from "../styles/components/header.module.scss";
@@ -8,13 +8,22 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, userRole, logout, isAuthenticated } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     navigate("/auth");
+    setIsMenuOpen(false);
   };
 
-  
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
   if (!isAuthenticated) {
     return (
       <header className={styles.header}>
@@ -33,25 +42,56 @@ const Header = () => {
                 </div>
               </Link>
             </div>
-            <nav className={styles.nav}>
-              <Link to="/" className={styles.nav__link}>
+
+            {/* Бургер-кнопка для неавторизованных */}
+            <button
+              className={`${styles["burger-btn"]} ${isMenuOpen ? styles.open : ""}`}
+              onClick={toggleMenu}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+
+            <nav className={`${styles.nav} ${isMenuOpen ? styles.open : ""}`}>
+              <Link to="/" className={styles.nav__link} onClick={closeMenu}>
                 Главная
               </Link>
-              <Link to="/about" className={styles.nav__link}>
+              <Link
+                to="/about"
+                className={styles.nav__link}
+                onClick={closeMenu}
+              >
                 О Заводе
               </Link>
-              <Link to="/products" className={styles.nav__link}>
+              <Link
+                to="/products"
+                className={styles.nav__link}
+                onClick={closeMenu}
+              >
                 Продукция
               </Link>
-              <Link to="/contacts" className={styles.nav__link}>
+              <Link
+                to="/contacts"
+                className={styles.nav__link}
+                onClick={closeMenu}
+              >
                 Контакты
               </Link>
             </nav>
+
             <div className={styles.employee}>
               <Link to="/auth" className={styles.employee__link}>
                 Для сотрудников
               </Link>
             </div>
+
+            {isMenuOpen && (
+              <div
+                className={`${styles["menu-overlay"]} ${styles.open}`}
+                onClick={closeMenu}
+              ></div>
+            )}
           </div>
         </div>
       </header>
@@ -69,6 +109,7 @@ const Header = () => {
             <Link
               to={canAccessApprovals ? "/approvals" : "/request"}
               className={styles.logo__link}
+              onClick={closeMenu}
             >
               <div className={styles.logo__image}>
                 <img src={logo} alt="ФКП Авангард" />
@@ -80,10 +121,21 @@ const Header = () => {
             </Link>
           </div>
 
-          <nav className={styles.nav}>
+          {/* Бургер-кнопка для авторизованных */}
+          <button
+            className={`${styles["burger-btn"]} ${isMenuOpen ? styles.open : ""}`}
+            onClick={toggleMenu}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+
+          <nav className={`${styles.nav} ${isMenuOpen ? styles.open : ""}`}>
             <Link
               to="/request"
               className={`${styles.nav__link} ${location.pathname === "/request" ? styles["nav__link--active"] : ""}`}
+              onClick={closeMenu}
             >
               Создать заявку
             </Link>
@@ -91,6 +143,7 @@ const Header = () => {
               <Link
                 to="/approvals"
                 className={`${styles.nav__link} ${location.pathname === "/approvals" ? styles["nav__link--active"] : ""}`}
+                onClick={closeMenu}
               >
                 Лента согласований
               </Link>
@@ -99,6 +152,7 @@ const Header = () => {
               <Link
                 to="/admin"
                 className={`${styles.nav__link} ${location.pathname === "/admin" ? styles["nav__link--active"] : ""}`}
+                onClick={closeMenu}
               >
                 Админ-панель
               </Link>
@@ -123,6 +177,13 @@ const Header = () => {
               </button>
             </div>
           </div>
+
+          {isMenuOpen && (
+            <div
+              className={`${styles["menu-overlay"]} ${styles.open}`}
+              onClick={closeMenu}
+            ></div>
+          )}
         </div>
       </div>
     </header>

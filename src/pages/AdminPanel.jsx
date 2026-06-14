@@ -5,66 +5,132 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState("requests");
   const [requests, setRequests] = useState([]);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [message, setMessage] = useState("");
+  const [requestsPage, setRequestsPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [hasMoreRequests, setHasMoreRequests] = useState(true);
+  const [hasMoreUsers, setHasMoreUsers] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const itemsPerPage = 15;
+
   const [newUser, setNewUser] = useState({
     email: "",
     full_name: "",
     role: "employee",
+    password: "",
   });
+
+  const loadRequests = async (isInitial = true) => {
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const from = (requestsPage - 1) * itemsPerPage;
+      const to = requestsPage * itemsPerPage - 1;
+
+      const { data, error, count } = await supabase
+        .from("requests")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (isInitial) {
+        setRequests(data || []);
+      } else {
+        setRequests((prev) => [...prev, ...(data || [])]);
+      }
+
+      setTotalCount(count || 0);
+      setHasMoreRequests(data?.length === itemsPerPage);
+    } catch (err) {
+      console.error("Ошибка загрузки заявок:", err);
+      setMessage("Ошибка загрузки заявок");
+    } finally {
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  };
+
+  const loadUsers = async (isInitial = true) => {
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+
+    try {
+      const from = (usersPage - 1) * itemsPerPage;
+      const to = usersPage * itemsPerPage - 1;
+
+      const { data, error, count } = await supabase
+        .from("users")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (error) throw error;
+
+      if (isInitial) {
+        setUsers(data || []);
+      } else {
+        setUsers((prev) => [...prev, ...(data || [])]);
+      }
+
+      setHasMoreUsers(data?.length === itemsPerPage);
+    } catch (err) {
+      console.error("Ошибка загрузки пользователей:", err);
+      setMessage("Ошибка загрузки пользователей");
+    } finally {
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setLoadingMore(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (activeTab === "requests") {
-      loadRequests();
+      loadRequests(true);
     } else if (activeTab === "users") {
-      loadUsers();
+      loadUsers(true);
     }
   }, [activeTab]);
 
-  const loadRequests = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("requests")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Ошибка загрузки заявок:", error);
-    } else {
-      setRequests(data || []);
+  useEffect(() => {
+    if (activeTab === "requests" && requestsPage > 1) {
+      loadRequests(false);
+    } else if (activeTab === "users" && usersPage > 1) {
+      loadUsers(false);
     }
-    setLoading(false);
+  }, [requestsPage, usersPage, activeTab]);
+
+  const loadMoreRequests = () => {
+    if (!loadingMore && hasMoreRequests) {
+      setRequestsPage((prev) => prev + 1);
+    }
   };
 
-  const loadUsers = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Ошибка загрузки пользователей:", error);
-    } else {
-      setUsers(data || []);
+  const loadMoreUsers = () => {
+    if (!loadingMore && hasMoreUsers) {
+      setUsersPage((prev) => prev + 1);
     }
-    setLoading(false);
-  };
-
-  const generateRandomPassword = () => {
-    const chars =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let password = "";
-    for (let i = 0; i < 10; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
   };
 
   const addUser = async (e) => {
     e.preventDefault();
 
-    if (!newUser.email || !newUser.full_name) {
+    if (!newUser.email || !newUser.full_name || !newUser.password) {
       setMessage("Заполните все поля");
       setTimeout(() => setMessage(""), 3000);
       return;
@@ -82,45 +148,53 @@ const AdminPanel = () => {
       return;
     }
 
-    const password = generateRandomPassword();
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: newUser.email,
-      password: password,
-      options: {
-        data: { full_name: newUser.full_name },
-      },
-    });
-
-    if (authError) {
-      if (authError.message.includes("rate limit")) {
-        setMessage("Достигнут лимит запросов. Попробуйте позже.");
-      } else {
-        setMessage(`Ошибка: ${authError.message}`);
-      }
-      setTimeout(() => setMessage(""), 5000);
-      return;
-    }
-
-    if (authData.user) {
-      const { error: insertError } = await supabase.from("users").insert([
-        {
-          id: authData.user.id,
-          email: newUser.email,
-          full_name: newUser.full_name,
-          role: newUser.role,
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUser.email,
+        password: newUser.password,
+        options: {
+          data: { full_name: newUser.full_name },
         },
-      ]);
+      });
 
-      if (insertError) {
-        setMessage(`Ошибка: ${insertError.message}`);
-      } else {
-        setMessage(
-          `Пользователь ${newUser.email} добавлен! Пароль: ${password}`,
-        );
-        setNewUser({ email: "", full_name: "", role: "employee" });
-        loadUsers();
+      if (authError) {
+        if (authError.message.includes("rate limit")) {
+          setMessage("Слишком много попыток. Подождите минуту.");
+        } else {
+          setMessage(`Ошибка: ${authError.message}`);
+        }
+        setTimeout(() => setMessage(""), 5000);
+        return;
       }
+
+      if (authData.user) {
+        const { error: insertError } = await supabase.from("users").insert([
+          {
+            id: authData.user.id,
+            email: newUser.email,
+            full_name: newUser.full_name,
+            role: newUser.role,
+          },
+        ]);
+
+        if (insertError) {
+          setMessage(`Ошибка: ${insertError.message}`);
+        } else {
+          setMessage(
+            `Пользователь ${newUser.email} добавлен! Пароль: ${newUser.password}`,
+          );
+          setNewUser({
+            email: "",
+            full_name: "",
+            role: "employee",
+            password: "",
+          });
+          setUsersPage(1);
+          loadUsers(true);
+        }
+      }
+    } catch (err) {
+      setMessage(`Ошибка: ${err.message}`);
     }
     setTimeout(() => setMessage(""), 5000);
   };
@@ -132,9 +206,22 @@ const AdminPanel = () => {
       .eq("id", id);
     if (!error) {
       setMessage("Роль пользователя изменена");
-      loadUsers();
+      setUsers((prev) =>
+        prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)),
+      );
     }
     setTimeout(() => setMessage(""), 3000);
+  };
+
+  const deleteUser = async (id, email) => {
+    if (window.confirm(`Удалить пользователя ${email}?`)) {
+      const { error } = await supabase.from("users").delete().eq("id", id);
+      if (!error) {
+        setMessage(`Пользователь ${email} удалён`);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+      }
+      setTimeout(() => setMessage(""), 3000);
+    }
   };
 
   const updateRequestStatus = async (id, status) => {
@@ -144,16 +231,20 @@ const AdminPanel = () => {
       .eq("id", id);
     if (!error) {
       setMessage("Статус заявки изменён");
-      loadRequests();
+      setRequests((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status } : r)),
+      );
     }
     setTimeout(() => setMessage(""), 3000);
   };
 
   const deleteRequest = async (id) => {
     if (window.confirm("Удалить заявку?")) {
-      await supabase.from("requests").delete().eq("id", id);
-      loadRequests();
-      setMessage("Заявка удалена");
+      const { error } = await supabase.from("requests").delete().eq("id", id);
+      if (!error) {
+        setMessage("Заявка удалена");
+        setRequests((prev) => prev.filter((r) => r.id !== id));
+      }
       setTimeout(() => setMessage(""), 3000);
     }
   };
@@ -189,21 +280,45 @@ const AdminPanel = () => {
   };
 
   const stats = {
-    total: requests.length,
+    total: totalCount,
     approved: requests.filter((r) => r.status === "approved").length,
     pending: requests.filter((r) => r.status === "pending").length,
     rejected: requests.filter((r) => r.status === "rejected").length,
   };
 
-  if (loading) {
-    return <div className="loading-container">Загрузка...</div>;
+  if (loading && activeTab !== "add-user") {
+    return (
+      <div className="admin-panel">
+        <div className="container">
+          <div className="admin-header">
+            <h1>Панель управления</h1>
+            <div className="loading-container">
+              <div className="loading-spinner"></div>
+              <p>Загрузка...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="admin-panel">
       <div className="container">
-        <h1>Панель управления</h1>
-        {message && <div className="admin-message">{message}</div>}
+        <div className="admin-header">
+          <h1>Панель управления</h1>
+          <p className="admin-subtitle">
+            Управление заявками и пользователями системы
+          </p>
+        </div>
+
+        {message && (
+          <div
+            className={`admin-message ${message.includes("Ошибка") ? "error" : ""}`}
+          >
+            {message}
+          </div>
+        )}
 
         <div className="admin-stats">
           <div className="stat-card">
@@ -227,21 +342,27 @@ const AdminPanel = () => {
         <div className="admin-tabs">
           <button
             className={`tab-btn ${activeTab === "requests" ? "active" : ""}`}
-            onClick={() => setActiveTab("requests")}
+            onClick={() => {
+              setActiveTab("requests");
+              setRequestsPage(1);
+            }}
           >
-            Заявки ({requests.length})
+            Заявки ({totalCount})
           </button>
           <button
             className={`tab-btn ${activeTab === "users" ? "active" : ""}`}
-            onClick={() => setActiveTab("users")}
+            onClick={() => {
+              setActiveTab("users");
+              setUsersPage(1);
+            }}
           >
-            Пользователи ({users.length})
+            Пользователи
           </button>
           <button
             className={`tab-btn ${activeTab === "add-user" ? "active" : ""}`}
             onClick={() => setActiveTab("add-user")}
           >
-            Добавить
+            Добавить пользователя
           </button>
         </div>
 
@@ -253,6 +374,7 @@ const AdminPanel = () => {
                   <th>№</th>
                   <th>Заявитель</th>
                   <th>Тема</th>
+                  <th>Приоритет</th>
                   <th>Статус</th>
                   <th>Действия</th>
                 </tr>
@@ -265,6 +387,13 @@ const AdminPanel = () => {
                     <td>{req.title}</td>
                     <td>
                       <span
+                        className={`priority-badge ${getPriorityClass(req.priority)}`}
+                      >
+                        {req.priority}
+                      </span>
+                    </td>
+                    <td>
+                      <span
                         className={`status-badge ${getStatusClass(req.status)}`}
                       >
                         {getStatusText(req.status)}
@@ -272,10 +401,11 @@ const AdminPanel = () => {
                     </td>
                     <td className="actions-cell">
                       <select
+                        value={req.status}
                         onChange={(e) =>
                           updateRequestStatus(req.id, e.target.value)
                         }
-                        value={req.status}
+                        className="status-select"
                       >
                         <option value="pending">На рассмотрении</option>
                         <option value="approved">Одобрено</option>
@@ -292,6 +422,18 @@ const AdminPanel = () => {
                 ))}
               </tbody>
             </table>
+
+            {hasMoreRequests && (
+              <div className="load-more-container">
+                <button
+                  onClick={loadMoreRequests}
+                  className="load-more-btn"
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Загрузка..." : "Загрузить ещё"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -318,51 +460,113 @@ const AdminPanel = () => {
                     </td>
                     <td className="actions-cell">
                       <select
-                        onChange={(e) => updateUserRole(u.id, e.target.value)}
                         value={u.role}
+                        onChange={(e) => updateUserRole(u.id, e.target.value)}
+                        className="role-select"
                       >
                         <option value="employee">Сотрудник</option>
                         <option value="manager">Менеджер</option>
-                        <option value="admin">Админ</option>
+                        <option value="admin">Администратор</option>
                       </select>
+                      <button
+                        onClick={() => deleteUser(u.id, u.email)}
+                        className="delete-btn"
+                      >
+                        Удалить
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {hasMoreUsers && (
+              <div className="load-more-container">
+                <button
+                  onClick={loadMoreUsers}
+                  className="load-more-btn"
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Загрузка..." : "Загрузить ещё"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === "add-user" && (
-          <form onSubmit={addUser} className="add-user-form">
-            <input
-              type="email"
-              placeholder="Email"
-              value={newUser.email}
-              onChange={(e) =>
-                setNewUser({ ...newUser, email: e.target.value })
-              }
-              required
-            />
-            <input
-              type="text"
-              placeholder="ФИО"
-              value={newUser.full_name}
-              onChange={(e) =>
-                setNewUser({ ...newUser, full_name: e.target.value })
-              }
-              required
-            />
-            <select
-              value={newUser.role}
-              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+          <div className="add-user-section">
+            <form onSubmit={addUser} className="add-user-form">
+              <div className="form-group">
+                <label className="form-label">Email</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, email: e.target.value })
+                  }
+                  placeholder="user@avangard.ru"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">ФИО</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={newUser.full_name}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, full_name: e.target.value })
+                  }
+                  placeholder="Иванов Иван Иванович"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Пароль</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={newUser.password}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, password: e.target.value })
+                  }
+                  placeholder="придумайте пароль"
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Роль</label>
+                <select
+                  className="form-select"
+                  value={newUser.role}
+                  onChange={(e) =>
+                    setNewUser({ ...newUser, role: e.target.value })
+                  }
+                >
+                  <option value="employee">Сотрудник</option>
+                  <option value="manager">Менеджер</option>
+                  <option value="admin">Администратор</option>
+                </select>
+              </div>
+              <button type="submit" className="submit-btn">
+                Добавить пользователя
+              </button>
+            </form>
+            <p
+              className="info-text"
+              style={{
+                textAlign: "center",
+                marginTop: "16px",
+                fontSize: "12px",
+                color: "#666",
+              }}
             >
-              <option value="employee">Сотрудник</option>
-              <option value="manager">Менеджер</option>
-              <option value="admin">Администратор</option>
-            </select>
-            <button type="submit">Добавить пользователя</button>
-          </form>
+              После добавления пользователь может войти с указанным email и
+              паролем
+            </p>
+          </div>
         )}
       </div>
     </div>
