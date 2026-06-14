@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import slide1 from "../assets/img/slide1.svg";
 import slide2 from "../assets/img/slide2.svg";
 import slide3 from "../assets/img/slide3.svg";
@@ -9,6 +9,11 @@ import slide6 from "../assets/img/slide6.svg";
 const CarouselSlider = () => {
   const [activeIndex, setActiveIndex] = useState(2);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [imageKeys, setImageKeys] = useState({
+    left: Date.now(),
+    center: Date.now(),
+    right: Date.now(),
+  });
 
   const slides = [
     { id: 1, image: slide1 },
@@ -19,23 +24,38 @@ const CarouselSlider = () => {
     { id: 6, image: slide6 },
   ];
 
-  const handlePrev = () => {
+  // Принудительное обновление ключей при смене слайда
+  const refreshImageKeys = useCallback(() => {
+    setImageKeys({
+      left: Date.now(),
+      center: Date.now(),
+      right: Date.now(),
+    });
+  }, []);
+
+  const handlePrev = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setActiveIndex((prev) => (prev - 1 + slides.length) % slides.length);
-  };
+    refreshImageKeys();
+  }, [isAnimating, slides.length, refreshImageKeys]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (isAnimating) return;
     setIsAnimating(true);
     setActiveIndex((prev) => (prev + 1) % slides.length);
-  };
+    refreshImageKeys();
+  }, [isAnimating, slides.length, refreshImageKeys]);
 
-  const goToSlide = (index) => {
-    if (isAnimating || index === activeIndex) return;
-    setIsAnimating(true);
-    setActiveIndex(index);
-  };
+  const goToSlide = useCallback(
+    (index) => {
+      if (isAnimating || index === activeIndex) return;
+      setIsAnimating(true);
+      setActiveIndex(index);
+      refreshImageKeys();
+    },
+    [isAnimating, activeIndex, refreshImageKeys],
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -44,48 +64,46 @@ const CarouselSlider = () => {
     return () => clearTimeout(timer);
   }, [activeIndex]);
 
-  const getLeftSlideIndex = () => {
-    return (activeIndex - 1 + slides.length) % slides.length;
-  };
-
-  const getRightSlideIndex = () => {
-    return (activeIndex + 1) % slides.length;
-  };
+  const getLeftIndex = (activeIndex - 1 + slides.length) % slides.length;
+  const getRightIndex = (activeIndex + 1) % slides.length;
 
   return (
     <section className="carousel-section">
       <div className="container">
         <div className="carousel-wrapper">
           <div className="carousel-container">
-
+            {/* Левый слайд */}
             <div className="carousel-slide left" onClick={handlePrev}>
               <div className="carousel-slide-image">
                 <img
-                  src={slides[getLeftSlideIndex()].image}
-                  alt="Предыдущий слайд"
+                  key={imageKeys.left}
+                  src={slides[getLeftIndex].image}
+                  alt={`Слайд ${getLeftIndex + 1}`}
                   draggable="false"
                 />
               </div>
               <div className="carousel-overlay"></div>
             </div>
 
-
+            {/* Центральный слайд */}
             <div className="carousel-slide center">
               <div className="carousel-slide-image">
                 <img
+                  key={imageKeys.center}
                   src={slides[activeIndex].image}
-                  alt="Центральный слайд"
+                  alt={`Слайд ${activeIndex + 1}`}
                   draggable="false"
                 />
               </div>
             </div>
 
-
+            {/* Правый слайд */}
             <div className="carousel-slide right" onClick={handleNext}>
               <div className="carousel-slide-image">
                 <img
-                  src={slides[getRightSlideIndex()].image}
-                  alt="Следующий слайд"
+                  key={imageKeys.right}
+                  src={slides[getRightIndex].image}
+                  alt={`Слайд ${getRightIndex + 1}`}
                   draggable="false"
                 />
               </div>
@@ -93,12 +111,14 @@ const CarouselSlider = () => {
             </div>
           </div>
 
+          {/* Точки навигации */}
           <div className="carousel-dots">
             {slides.map((_, index) => (
               <button
                 key={index}
                 className={`carousel-dot ${index === activeIndex ? "active" : ""}`}
                 onClick={() => goToSlide(index)}
+                aria-label={`Перейти к слайду ${index + 1}`}
               />
             ))}
           </div>
