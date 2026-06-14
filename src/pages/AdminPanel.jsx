@@ -13,7 +13,7 @@ const AdminPanel = () => {
   const [hasMoreRequests, setHasMoreRequests] = useState(true);
   const [hasMoreUsers, setHasMoreUsers] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const itemsPerPage = 15;
+  const itemsPerPage = 10;
 
   const [newUser, setNewUser] = useState({
     email: "",
